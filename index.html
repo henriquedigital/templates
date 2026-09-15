@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Acessibilidade Urbana</title>
+    <!-- Servidor Oficial do Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100vw; background-color: #e5e3df; }
+        .titulo-mapa {
+            position: absolute; top: 10px; left: 50px; z-index: 1000;
+            background: white; padding: 10px 20px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h2 class="titulo-mapa">♿ Monitoramento de Acessibilidade Urbana</h2>
+    <div id="map"></div>
+
+    <!-- Servidor Oficial do Leaflet JS -->
+    <script src="https://unpkg.com"></script>
+    <script>
+        // Função segura para garantir que o 'L' do Leaflet já existe na memória
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof L === 'undefined') {
+                alert('Erro ao carregar o servidor do mapa. Verifique sua conexão com a internet!');
+                return;
+            }
+
+            // Inicializa o mapa centralizado em São Paulo
+            const map = L.map('map').setView([-23.55052, -46.633308], 12); 
+
+            // Camada estável OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            // Busca os pontos da API do GeoPandas
+            fetch('/api/pontos')
+                .then(response => response.json())
+                .then(geojsonData => {
+                    L.geoJSON(geojsonData, {
+                        onEachFeature: function (feature, layer) {
+                            if (feature.properties) {
+                                layer.bindPopup(`
+                                    <strong>🚨 ${feature.properties.tipo || 'Obstáculo'}</strong><br>
+                                    ${feature.properties.descricao || ''}<br>
+                                    <small>ID: ${feature.properties.id}</small>
+                                `);
+                            }
+                        }
+                    }).addTo(map);
+                })
+                .catch(error => console.error('Erro ao carregar pontos:', error));
+        });
+    </script>
+</body>
+</html>
