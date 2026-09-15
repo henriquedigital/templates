@@ -4,59 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mapa de Acessibilidade Urbana</title>
-    <!-- Servidor Oficial do Leaflet CSS -->
+    <!-- Carrega o mapa interativo do Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com" />
+    <script src="https://unpkg.com"></script>
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        #map { height: 100vh; width: 100vw; background-color: #e5e3df; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; }
+        #map { width: 100%; height: 100vh; }
         .titulo-mapa {
-            position: absolute; top: 10px; left: 50px; z-index: 1000;
-            background: white; padding: 10px 20px; border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin: 0;
+            position: absolute; top: 10px; left: 50px;
+            background: white; padding: 10px 20px;
+            border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            z-index: 1000; font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-    <h2 class="titulo-mapa">♿ Monitoramento de Acessibilidade Urbana</h2>
+    <div class="titulo-mapa">🗺️ Central de Monitoramento de Acessibilidade</div>
     <div id="map"></div>
 
-    <!-- Servidor Oficial do Leaflet JS -->
-    <script src="https://unpkg.com"></script>
     <script>
-        // Função segura para garantir que o 'L' do Leaflet já existe na memória
-        window.addEventListener('DOMContentLoaded', () => {
-            if (typeof L === 'undefined') {
-                alert('Erro ao carregar o servidor do mapa. Verifique sua conexão com a internet!');
-                return;
-            }
+        // Inicializa o mapa focado no Brasil / São Paulo
+        const map = L.map('map').setView([-23.55052, -46.633308], 12);
 
-            // Inicializa o mapa centralizado em São Paulo
-            const map = L.map('map').setView([-23.55052, -46.633308], 12); 
+        // Adiciona as imagens do mapa do OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
 
-            // Camada estável OpenStreetMap
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-
-            // Busca os pontos da API do GeoPandas
+        // Função para carregar os pontos da API do seu Flask em tempo real
+        function carregarPontos() {
             fetch('/api/pontos')
                 .then(response => response.json())
-                .then(geojsonData => {
-                    L.geoJSON(geojsonData, {
-                        onEachFeature: function (feature, layer) {
-                            if (feature.properties) {
-                                layer.bindPopup(`
-                                    <strong>🚨 ${feature.properties.tipo || 'Obstáculo'}</strong><br>
-                                    ${feature.properties.descricao || ''}<br>
-                                    <small>ID: ${feature.properties.id}</small>
-                                `);
-                            }
-                        }
-                    }).addTo(map);
+                .then(pontos => {
+                    pontos.forEach(ponto => {
+                        L.marker([ponto.lat, ponto.lng])
+                            .addTo(map)
+                            .bindPopup(`<b>${ponto.titulo}</b><br>${ponto.descricao}`);
+                    });
                 })
-                .catch(error => console.error('Erro ao carregar pontos:', error));
-        });
+                .catch(err => console.error("Erro ao carregar pontos do servidor:", err));
+        }
+
+        // Executa a carga inicial dos pontos
+        carregarPontos();
+        // Atualiza os pontos no mapa a cada 5 segundos automaticamente
+        setInterval(carregarPontos, 5000);
     </script>
 </body>
 </html>
